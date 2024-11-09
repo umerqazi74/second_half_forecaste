@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 import pandas as pd
 import requests
-from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor  # Import LGBMRegressor from LightGBM
 import numpy as np
 
 app = Flask(__name__)
@@ -48,8 +48,8 @@ def forecast_xau_30_days():
     y_train = train_data[target_column]
     X_forecast = forecast_data[[f'{target_column}_lag_{i}' for i in range(1, n_lags + 1)]]
 
-    # Define and train the XGBoost model
-    model = XGBRegressor(objective='reg:squarederror', n_estimators=100, random_state=123)
+    # Define and train the LightGBM model
+    model = LGBMRegressor(objective='regression', n_estimators=100, random_state=123)
     model.fit(X_train, y_train)
     
     # Make predictions for the next 30 days
