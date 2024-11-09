@@ -52,12 +52,12 @@ def forecast_xau_30_days():
     model = LGBMRegressor(objective='regression', n_estimators=100, random_state=123)
     model.fit(X_train, y_train)
     
-    # Make predictions for the next 30 days
-    predicted_past_30_days = model.predict(X_forecast)
-    pred_close_future_30 = forecast_data['Close_GC=F'].iloc[-1] + np.cumsum(predicted_past_30_days)
+    # # Make predictions for the next 30 days
+    # predicted_past_30_days = model.predict(X_forecast)
+    # pred_close_future_30 = forecast_data['Close_GC=F'].iloc[-1] + np.cumsum(predicted_past_30_days)
 
     # Convert the predictions to Python float to make them JSON serializable
-    predicted_past_30_days = predicted_past_30_days.astype(float).tolist()
+    # predicted_past_30_days = predicted_past_30_days.astype(float).tolist()
     pred_close_future_30 = pred_close_future_30.astype(float).tolist()
 
     # Get actual closing prices for the last 30 days
@@ -66,7 +66,7 @@ def forecast_xau_30_days():
     # Return the results in JSON format
     return {
         "actual_last_30_days": actual_last_30_days,
-        "predicted_past_30_days": predicted_past_30_days,
+        # "predicted_past_30_days": predicted_past_30_days,
         "predicted_next_30_days": pred_close_future_30
     }
 
