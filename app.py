@@ -1,9 +1,6 @@
 from flask import Flask, jsonify
-import pandas as pd
-import numpy as np
 import yfinance as yf
-from skforecast.ForecasterAutoreg import ForecasterAutoreg
-from sklearn.linear_model import LinearRegression
+from statsmodels.tsa.arima.model import ARIMA
 
 app = Flask(__name__)
 
@@ -39,27 +36,16 @@ def forecast_xau_30_days():
     train_end = df.index[-31]
     forecast_steps = 30
 
-    # Define and fit the forecaster with LinearRegression
-    forecaster_lr_daily = ForecasterAutoreg(
-        regressor=LinearRegression(),
-        lags=30
-    )
-    forecaster_lr_daily.fit(
-        y=df.loc[:train_end, 'var_Close'],
-        exog=df.loc[:train_end, [col for col in df.columns if 'var_Prev' in col]]
-    )
+    # Use ARIMA model for forecasting
+    # We will use the 'var_Close' column for the ARIMA model
+    model = ARIMA(df.loc[:train_end, 'var_Close'], order=(5, 1, 5))  # ARIMA with order (p,d,q)
+    model_fit = model.fit()
 
-    # Align `exog` data to start one day after training ends
-    exog_for_past_30 = df.loc[train_end + pd.Timedelta(days=1):, [col for col in df.columns if 'var_Prev' in col]].iloc[:30]
-    exog_for_next_30 = df.loc[train_end + pd.Timedelta(days=1):, [col for col in df.columns if 'var_Prev' in col]].iloc[-30:]
-
-    # Make predictions
-    predicted_past_30_days = forecaster_lr_daily.predict(steps=forecast_steps, exog=exog_for_past_30)
-    predicted_next_30_days = forecaster_lr_daily.predict(steps=forecast_steps, exog=exog_for_next_30)
+    # Make predictions for the next 30 days
+    forecast = model_fit.forecast(steps=forecast_steps)
 
     # Calculate Predicted Close Prices
-    pred_close_past_30 = df.loc[train_end:, 'prev_Close'].iloc[:30].values + predicted_past_30_days.values
-    pred_close_future_30 = df.loc[train_end:, 'prev_Close'].iloc[-1] + predicted_next_30_days.cumsum().values
+    pred_close_future_30 = df.loc[train_end:, 'prev_Close'].iloc[-1] + forecast.cumsum().values
 
     # Get actual closing prices for the last 30 days
     actual_last_30_days = df.loc[train_end:, 'Close'].iloc[:30].values.flatten().tolist()
@@ -70,16 +56,14 @@ def forecast_xau_30_days():
         return [list(arg) + [arg[-1]] * (max_length - len(arg)) for arg in args]
 
     # Ensure all lists have equal length
-    actual_last_30_days, pred_close_past_30, pred_close_future_30 = ensure_equal_length(
+    actual_last_30_days, pred_close_future_30 = ensure_equal_length(
         actual_last_30_days,
-        pred_close_past_30,
         pred_close_future_30
     )
 
     # Return the predicted and actual values as a dictionary
     return {
         "actual_last_30_days": actual_last_30_days,
-        "predicted_past_30_days": pred_close_past_30,
         "predicted_next_30_days": pred_close_future_30
     }
 
